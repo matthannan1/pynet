@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-# Parse the CDP data (see link above) to obtain the following
-# information: hostname, ip, model, vendor, and device_type 
-# (device_type will be either 'router', 'switch', or 'unknown').
-
-
-
-
-file_object = open("https://github.com/ktbyers/pynet/learnpy_ecourse/class5/cdp_data.py")
-print file_object 
-=======
 ##### Python Shell - experimenting with dictionary of dictionaries #####
 
 # Initialize network_devices to be a blank dictionary
@@ -300,21 +289,54 @@ for cdp_data in bundled_cdp_details:
 
     # Reset hostname for each cdp output
     hostname = ''
+    remote_hostname = ''
 
     # Iterate over each line of the cdp data
     for line in cdp_data_line:
 
         # As a precaution set hostname to '' on every device divider
         if '----------------' in line:
-            hostname = ''
+            remote_hostname = ''
+
+        # Find local hostname (assumes no abbreviation in command)
+        if 'show cdp neighbors detail' in line:
+            local_hostname = line.split("show cdp neighbors detail")[0]
+            if '>' in local_hostname:
+                local_hostname = local_hostname.split('>')[0]
+            elif '#' in local_hostname:
+                local_hostname = local_hostname.split('#')[0]
+            else:
+                sys.exit("Invalid prompt for local hostname - exiting")
+
+            # When you find a new device, initialize it as a blank dictionary
+            if not local_hostname in network_devices:
+                network_devices[local_hostname] = {}
+
 
         # Processing hostname
         if 'Device ID: ' in line:
-            (junk, hostname) = line.split('Device ID: ')
-            hostname = hostname.strip()
+            (junk, remote_hostname) = line.split('Device ID: ')
+            remote_hostname = remote_hostname.strip()
 
-            if not hostname in network_devices:
-                network_devices[hostname] = {}
+            # When you find a new device, initialize it as a blank dictionary
+            if not remote_hostname in network_devices:
+                network_devices[remote_hostname] = {}
+
+
+            # Map adjacencies
+            if (local_hostname in network_devices) and remote_hostname:
+
+                # Add adjacent_devices field if it doesn't exist
+                if not 'adjacent_devices' in network_devices[local_hostname]:
+                    network_devices[local_hostname]['adjacent_devices'] = [remote_hostname]
+
+                # adjacent_devices is already present, append to it
+                else:
+
+                    # Add the remote device (if not already on list)
+                    if not remote_hostname in network_devices[local_hostname]['adjacent_devices']:
+                        network_devices[local_hostname]['adjacent_devices'].append(remote_hostname)
+
 
 #        print hostname
 
@@ -353,4 +375,3 @@ for cdp_data in bundled_cdp_details:
 print '\n'
 pprint.pprint(network_devices)
 print '\n'
->>>>>>> ee3e23527cf428c64f2a023cb841a3b7fafa58ac
